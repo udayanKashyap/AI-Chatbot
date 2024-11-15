@@ -1,35 +1,62 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import { Input } from "./components/ui/input";
+import { ScrollArea } from "./components/ui/scroll-area";
+import { Button } from "./components/ui/button";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [prompt, setPrompt] = useState("");
+  const [response, setResponse] = useState("");
+  const [session, setSession] = useState();
+
+  useEffect(() => {
+    const loadSession = async () => {
+      if (window.ai) {
+        const session = await window.ai.assistant.create();
+        setSession(session);
+      }
+    };
+    loadSession();
+  }, [setSession]);
+
+  const handlePrompt = async () => {
+    if (session) {
+      const results = await session.prompt(prompt);
+      setResponse(results);
+    } else {
+      alert("session not loaded");
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="bg-background text-foreground min-h-[100vh] p-4 grid place-items-center">
+      <div className="w-full xl:w-[500px] space-y-4">
+        <h1 className="text-xl">AI Prompt App 💻</h1>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setPrompt("");
+          }}
+          className="flex gap-2"
+        >
+          <Input
+            placeholder="Enter your prompt"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
+          <Button onClick={handlePrompt} type="submit" disabled={!prompt}>
+            Search
+          </Button>
+        </form>
+        <ScrollArea className="h-[300px] rounded-md bg-muted p-4 overflow-auto">
+          {response ? (
+            <p className="text-sm">{response}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">No response yet...</p>
+          )}
+        </ScrollArea>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;

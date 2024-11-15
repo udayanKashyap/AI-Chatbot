@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import Markdown from "react-markdown";
+import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { ScrollArea } from "./components/ui/scroll-area";
-import { Button } from "./components/ui/button";
 
 function App() {
   const [prompt, setPrompt] = useState("");
@@ -10,18 +11,40 @@ function App() {
 
   useEffect(() => {
     const loadSession = async () => {
+      //@ts-expect-error types not defined
       if (window.ai) {
+        //@ts-expect-error types not defined
         const session = await window.ai.assistant.create();
         setSession(session);
       }
     };
     loadSession();
-  }, [setSession]);
+  }, [setSession, session]);
 
   const handlePrompt = async () => {
     if (session) {
+      //@ts-expect-error types not defined
       const results = await session.prompt(prompt);
+      //WARN: remove log
+      console.log(results);
       setResponse(results);
+    }
+  };
+
+  const handlePromptStream = async () => {
+    if (session) {
+      //@ts-expect-error types not defined
+      const results = await session.promptStreaming(prompt);
+      setResponse("");
+      const reader = results.getReader();
+      let done = false;
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        if (value) {
+          setResponse(value);
+        }
+      }
     } else {
       alert("session not loaded");
     }
@@ -29,7 +52,7 @@ function App() {
 
   return (
     <div className="bg-background text-foreground min-h-[100vh] p-4 grid place-items-center">
-      <div className="w-full xl:w-[500px] space-y-4">
+      <div className="w-full space-y-4">
         <h1 className="text-xl">AI Prompt App 💻</h1>
         <form
           onSubmit={(e) => {
@@ -43,13 +66,16 @@ function App() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
           />
-          <Button onClick={handlePrompt} type="submit" disabled={!prompt}>
+          <Button onClick={handlePromptStream} type="submit" disabled={!prompt}>
             Search
           </Button>
         </form>
-        <ScrollArea className="h-[300px] rounded-md bg-muted p-4 overflow-auto">
+        <ScrollArea className="h-[300px] rounded-md bg-muted p-4">
           {response ? (
-            <p className="text-sm">{response}</p>
+            <Markdown>
+              {/* <pre className="text-sm text-wrap">{response}</pre> */}
+              {response}
+            </Markdown>
           ) : (
             <p className="text-sm text-muted-foreground">No response yet...</p>
           )}

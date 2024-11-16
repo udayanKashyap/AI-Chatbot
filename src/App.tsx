@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Markdown from "react-markdown";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -8,6 +8,25 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 function App() {
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState("");
+  const [subheader, setSubheader] = useState(""); // State to hold the streaming subheader text
+  const scrollRef = useRef<HTMLDivElement>(null); // Ref for autoscrolling
+
+  const subheaderText =
+    "Inspired by the PokeDex, CharaDex is a chatbot for anime and movie characters."; // Full subheader text
+
+  useEffect(() => {
+    let letterIndex = 0;
+    const intervalId = setInterval(() => {
+      if (letterIndex < subheaderText.length) {
+        setSubheader((prev) => prev + subheaderText[letterIndex]); // Add one letter at a time
+        letterIndex++;
+      } else {
+        clearInterval(intervalId); // Stop the interval when all letters have been displayed
+      }
+    }, 35); // Adjust the speed of letter-by-letter display (in ms)
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
+  }, []);
 
   const handlePromptSubmit = async (e: any) => {
     e.preventDefault();
@@ -20,13 +39,26 @@ function App() {
     try {
       setResponse("Generating response...");
       const genAI = new GoogleGenerativeAI(import.meta.env.VITE_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
+      const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-pro",
+        systemInstruction:
+          "You are CharaDex, Only provide responses on the context of movies and anime characters.",
+      });
 
-      const results = await model.generateContent(prompt);
+      const results = await model.generateContentStream(prompt);
+      let responseText = "";
       if (results && results.response) {
-        setResponse(results.response.text());
-      } else {
-        setResponse("No response received from the model.");
+        for await (const chunk of results.stream) {
+          const chunkText = chunk.text();
+          responseText += chunkText;
+          setResponse(responseText);
+          setPrompt(""); // Reset the prompt field after successful response
+
+          // Autoscroll to bottom
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }
+        }
       }
     } catch (error) {
       console.error("Error generating content:", error);
@@ -35,33 +67,44 @@ function App() {
   };
 
   return (
-    <div className="bg-[#0d2b1d] text-[#b0e4d1] min-h-[100vh] p-4 grid place-items-center">
+    <div className="bg-[#060d16] text-[#c7d9eb] min-h-[100vh] p-4 grid place-items-center">
+      {" "}
+      {/* Darker navy blue */}
       <div className="w-full 2xl:w-[800px] space-y-10">
-        {" "}
-        {/* Increased vertical gap */}
         {/* Bigger and more spaced title */}
-        <h1 className="text-8xl font-bold text-center mb-10">CharaDex</h1>{" "}
-        {/* Increased font size and margin bottom */}
+        <h1 className="text-8xl font-bold text-center mb-4">CharaDex</h1>
+
+        {/* Subheader with streaming text */}
+        <h2 className="text-2xl text-center text-[#99aec4] mb-6">
+          {subheader}
+        </h2>
+
         <form onSubmit={handlePromptSubmit} className="flex gap-2">
           <Input
             placeholder="Enter your prompt"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="bg-[#1a3d29] text-[#b0e4d1] border border-[#2a5d44] focus:outline-none focus:ring-2 focus:ring-[#3d7c61]"
+            className="bg-[#14293f] text-[#c7d9eb] border border-[#1e3a57] focus:outline-none focus:ring-2 focus:ring-[#28557a]"
           />
           <Button
             type="submit"
             disabled={!prompt}
-            className="bg-[#3d7c61] text-[#ffffff] hover:bg-[#2a5d44] disabled:bg-[#708c78]"
+            className="bg-[#28557a] text-[#ffffff] hover:bg-[#1e3a57] disabled:bg-[#4e6987]"
           >
             Generate
           </Button>
         </form>
-        <ScrollArea className="h-[300px] rounded-md bg-[#1a3d29] p-4">
+
+        <ScrollArea
+          className="h-[400px] rounded-md bg-[#14293f] p-4 overflow-auto"
+          ref={scrollRef}
+        >
+          {" "}
+          {/* Larger response box */}
           {response ? (
             <Markdown>{response}</Markdown>
           ) : (
-            <p className="text-sm text-[#708c78]">No response yet...</p>
+            <p className="text-sm text-[#99aec4]">No response yet...</p>
           )}
         </ScrollArea>
       </div>

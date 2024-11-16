@@ -21,16 +21,6 @@ function App() {
     loadSession();
   }, [setSession, session]);
 
-  const handlePrompt = async () => {
-    if (session) {
-      //@ts-expect-error types not defined
-      const results = await session.prompt(prompt);
-      //WARN: remove log
-      console.log(results);
-      setResponse(results);
-    }
-  };
-
   const handlePromptStream = async () => {
     if (session) {
       //@ts-expect-error types not defined
@@ -51,8 +41,8 @@ function App() {
   };
 
   return (
-    <div className="bg-background text-foreground min-h-[100vh] p-4 grid place-items-center">
-      <div className="w-full space-y-4">
+    <div className="dark bg-background text-foreground min-h-[100vh] p-4 grid place-items-center">
+      <div className="w-full 2xl:w-[800px] space-y-4">
         <h1 className="text-xl">AI Prompt App 💻</h1>
         <form
           onSubmit={(e) => {
